@@ -1,0 +1,107 @@
+﻿@page "/FetchSerialNumber"
+@inject HttpClient Http
+@using Newtonsoft.Json.Linq;
+
+<h1>FareCard</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (IsSearching)
+{
+    <p><em>Loading...</em></p>
+}
+
+
+<div class="input-group container" style="margin-top: 1em">
+    <input bind="@SearchTerm" />
+    @*<input @oninput="(this.dispatchEvent(new CustomEvent('change', { bubbles: true })))" @bind="@SearchTerm" class="form-control" @onkeypress=@OnKeyPress />*@
+    <div class="input-group-append">
+        <button disabled="@IsSearching" onclick="@(async () => await SearchAsync())">Search</button>
+    </div>
+</div>
+
+<br />
+<table class="table">
+    <thead>
+        <tr>
+            <th>Key</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (items != null)
+        {
+            @foreach (var i in items)
+            {
+                <tr>
+                    <td>@i.FareCardID</td>
+                    <td>@i.SerialNumber</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+<span>@JsonResult</span>
+
+@functions {
+
+    string SearchTerm = "";
+    bool IsSearching = false;
+    //  ICollection<ClassItem> SearchResults { get => _searchResults; set { _searchResults = value; FirePropertyChanged(); } }
+
+    private string Title { get; set; } = "Hello, World!";
+
+
+    private async Task OnKeyPress(UIKeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !IsSearching)
+        {
+            await SearchAsync();
+            return;
+        }
+    }
+
+    dynamic items;
+    string Metadata;
+    string JsonResult;
+
+
+    protected override async Task OnInitAsync()
+    {
+        //http://localhost:7992/odata/GotoCardRepository/FareCardStatus(4)
+        //http://localhost:7992/odata/GotoCardRepository/FareCard(619493D3-BEFC-48AA-BEF0-00009ED96FF6)
+        //%20 = space
+        //%27 = '
+        //http://localhost:7992/odata/GotoCardRepository/FareCardStatus
+        //http://localhost:7992/odata/GotoCardRepository/FareCard?$filter=SerialNumber%20eq%20%270160036280968454%27
+
+        //await SearchAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            try
+            {
+                IsSearching = true;
+
+                var response = await Http.GetAsync($"http://localhost:7992/odata/GotoCardRepository/FareCard?$filter=SerialNumber%20eq%20%27{SearchTerm}%27");
+                response.EnsureSuccessStatusCode();
+                JsonResult = await response.Content.ReadAsStringAsync();
+
+                var temp = JObject.Parse(JsonResult);
+                Metadata = temp.GetValue("odata.metadata").ToString();
+                items = (JArray)temp.GetValue("value");
+
+            }
+            finally
+            {
+                IsSearching = false;
+
+            }
+
+            // this.StateHasChanged();
+        }
+    }
+}

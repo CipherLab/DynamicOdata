@@ -1,0 +1,65 @@
+﻿@page "/FetchFareCardStatus"
+@inject HttpClient Http
+@using Newtonsoft.Json.Linq;
+
+<h1>FareCardStatus</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (items == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var i in items)
+            {
+                <tr>
+                    <td>@i.FareCardStatusID</td>
+                    <td>@i.FareCardStatus</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@functions {
+    dynamic items;
+    string metadata;
+    string jsonResult;
+    protected override async Task OnInitAsync()
+    {
+        //http://localhost:7992/odata/GotoCardRepository/FareCardStatus(4)
+        //http://localhost:7992/odata/GotoCardRepository/FareCard(619493D3-BEFC-48AA-BEF0-00009ED96FF6)
+        //%20 = space
+        //%27 = '
+        //http://localhost:7992/odata/GotoCardRepository/FareCardStatus
+        //http://localhost:7992/odata/GotoCardRepository/FareCard?$filter=SerialNumber%20eq%20%270160036280968454%27
+
+
+        await SearchAsync();
+
+    }
+
+    private async Task SearchAsync()
+    {
+
+        var response = await Http.GetAsync("http://localhost:7992/odata/GotoCardRepository/FareCardStatus");
+        response.EnsureSuccessStatusCode();
+        var jsonResult = await response.Content.ReadAsStringAsync();
+
+        var temp = JObject.Parse(jsonResult);
+        var metadata = temp.GetValue("odata.metadata").ToString();
+        items = (JArray)temp.GetValue("value");
+
+    }
+
+}
